@@ -2,6 +2,7 @@
 
 from typing import Optional
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .db import init_db, get_db
 from .services.extraction import QuotationExtractor
@@ -70,11 +71,13 @@ class ArguMem:
         # Split text into chunks if needed
         memory_chunks = self.text_processor.split_text(content)
         
-        # Extract quotations from each chunk
+        # Extract quotations from each chunk in parallel
         all_quotations = []
-        for chunk in memory_chunks:
-            quotations = self.extractor.extract(chunk)
-            all_quotations.append(quotations)
+        with ThreadPoolExecutor() as executor:
+            future_to_chunk = {executor.submit(self.extractor.extract, chunk): chunk for chunk in memory_chunks}
+            for future in as_completed(future_to_chunk):
+                quotations = future.result()
+                all_quotations.append(quotations)
         
         # Remove duplicates
         unique_quotations = self.text_processor.remove_duplicate_quotations(all_quotations)
