@@ -4,7 +4,7 @@ CREATE TABLE sources (
   id INTEGER PRIMARY KEY,
   timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   raw_text TEXT NOT NULL,
-  context TEXT
+  context TEXT,
   title TEXT
 );
 
@@ -15,8 +15,8 @@ CREATE TABLE propositions (
 
 CREATE TABLE quotations (
   id INTEGER PRIMARY KEY,
-  source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE
-  quotation_text TEXT NOT NULL
+  source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+  quotation_text TEXT NOT NULL,
   locator TEXT
 );
 
