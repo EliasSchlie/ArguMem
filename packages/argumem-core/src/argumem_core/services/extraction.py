@@ -7,11 +7,10 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from ..models.schemas import Quotation
 
-
 class QuotationExtractor:
     """Service for extracting quotations using LLM."""
     
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0):
+    def __init__(self, model: str = "gpt-5", temperature: float = 0):
         self.llm = ChatOpenAI(model=model, temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=Quotation)
         self.prompt = ChatPromptTemplate.from_template(

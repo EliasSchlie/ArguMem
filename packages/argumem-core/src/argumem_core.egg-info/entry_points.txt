@@ -1,0 +1,2 @@
+[console_scripts]
+argumem-core = argumem_core:main

@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: argumem-core
+Version: 0.1.0
+Summary: Add your description here
+Author-email: EliasSchlie <EliasSchlie@users.noreply.github.com>
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: langchain>=0.3.27
+Requires-Dist: langchain-openai>=0.3.31
+Requires-Dist: pydantic>=2.11.7
+
+# ArguMem Core
+
+This package contains the core logic for ArguMem - an argumentative memory system for LLMs that builds graphs of propositions connected through argumentative relationships.

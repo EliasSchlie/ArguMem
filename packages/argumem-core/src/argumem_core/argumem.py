@@ -104,4 +104,4 @@ class ArguMem:
             This method is a placeholder for future implementation.
         """
         # TODO: Implement memory retrieval
-        raise NotImplementedError("getMemory will be implemented in retrieveSource.py")
+        raise NotImplementedError("getMemory is not implemented yet")

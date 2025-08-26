@@ -5,7 +5,17 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "langchain>=0.3.27",
-    "langchain-openai>=0.3.31",
-    "pydantic>=2.11.7",
+    "api",
+    "argumem-core",
+]
+
+[tool.uv.sources]
+api = { workspace = true }
+argumem-core = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+ "packages/argumem-core",
+ "apps/api",
+ "packages/ttestt",
 ]
