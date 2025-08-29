@@ -1,21 +1,37 @@
 [project]
 name = "argumem"
 version = "0.1.0"
-description = "Add your description here"
+description = "ArguMem argumentative memory system"
 readme = "README.md"
+authors = [
+    { name = "EliasSchlie", email = "EliasSchlie@users.noreply.github.com" }
+]
 requires-python = ">=3.13"
 dependencies = [
-    "api",
-    "argumem-core",
+    "dotenv>=0.9.9",
+    "langchain>=0.3.27",
+    "langchain-openai>=0.3.31",
+    "pydantic>=2.11.7",
+    "fastapi>=0.116.1",
+    "uvicorn[standard]>=0.35.0",
 ]
 
-[tool.uv.sources]
-api = { workspace = true }
-argumem-core = { workspace = true }
-
-[tool.uv.workspace]
-members = [
- "packages/argumem-core",
- "apps/api",
- "packages/ttestt",
+[dependency-groups]
+dev = [
+    "ipykernel>=6.30.1",
+    "pandas>=2.3.2",
 ]
+
+[project.scripts]
+argumem = "argumem:main"
+api = "api.main:app"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

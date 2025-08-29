@@ -1,0 +1,3 @@
+[console_scripts]
+api = api.main:app
+argumem = argumem:main
