@@ -56,6 +56,7 @@ function App() {
       await fetchDatabaseStats();
       setShowClearConfirm(false);
       setRefreshKey((prev) => prev + 1);
+      setViewState({ type: 'add' }); // Navigate to a safe view
     } catch (error: any) {
       console.error('Failed to clear database:', error);
     } finally {

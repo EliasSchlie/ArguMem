@@ -26,7 +26,7 @@ class SourceRepository:
             content: The raw text content
             context: Context information  
             title: Optional title
-            timestamp: Optional timestamp
+            timestamp: Optional custom timestamp (unused, for compatibility)
             
         Returns:
             The ID of the created source
@@ -35,20 +35,40 @@ class SourceRepository:
         cursor = conn.cursor()
         
         try:
-            if timestamp:
-                cursor.execute(
-                    "INSERT INTO sources (raw_text, context, title, timestamp) VALUES (?, ?, ?, ?)",
-                    (content, context, title, timestamp)
-                )
-            else:
-                cursor.execute(
-                    "INSERT INTO sources (raw_text, context, title) VALUES (?, ?, ?)",
-                    (content, context, title)
-                )
+            # Note: timestamp parameter is ignored since the database uses auto-generated timestamps
+            cursor.execute(
+                "INSERT INTO sources (raw_text, context, title) VALUES (?, ?, ?)",
+                (content, context, title)
+            )
             
             source_id = cursor.lastrowid
             conn.commit()
             return source_id
+        finally:
+            conn.close()
+
+    def get_recent(self, limit: int = 10) -> List[Dict]:
+        """
+        Get the most recent sources.
+        
+        Args:
+            limit: The number of sources to retrieve
+            
+        Returns:
+            A list of recent sources
+        """
+        conn = get_db(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT id, title, created_at, last_edited FROM sources ORDER BY last_edited DESC LIMIT ?",
+                (limit,)
+            )
+            sources = cursor.fetchall()
+            return [
+                {"id": row[0], "title": row[1], "created_at": row[2], "last_edited": row[3]}
+                for row in sources
+            ]
         finally:
             conn.close()
 

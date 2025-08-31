@@ -14,6 +14,12 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from argumem import ArguMem
+from argumem.repositories.database import SourceRepository
+from argumem.db import clear_db
+
+# Define a consistent, absolute path to the database at the project root.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+DB_PATH = os.path.join(PROJECT_ROOT, "argumem.db")
 
 
 app = FastAPI(
@@ -39,7 +45,7 @@ def get_argumem_instance(api_key: str = None):
         original_key = os.environ.get('OPENAI_API_KEY')
         os.environ['OPENAI_API_KEY'] = api_key
         try:
-            instance = ArguMem(db_path="argumem.db")
+            instance = ArguMem(db_path=DB_PATH)
             return instance
         finally:
             # Restore original key or remove if it wasn't set
@@ -48,7 +54,7 @@ def get_argumem_instance(api_key: str = None):
             elif 'OPENAI_API_KEY' in os.environ:
                 del os.environ['OPENAI_API_KEY']
     else:
-        return ArguMem(db_path="argumem.db")
+        return ArguMem(db_path=DB_PATH)
 
 
 class MemoryRequest(BaseModel):
@@ -105,7 +111,7 @@ async def add_memory(
 async def get_database_info():
     """Get database statistics."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         # Get counts from each table
@@ -133,18 +139,29 @@ async def get_database_info():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/sources/recent")
+async def get_recent_sources():
+    """Get the most recent sources."""
+    try:
+        repo = SourceRepository(db_path=DB_PATH)
+        recent_sources = repo.get_recent(limit=10)
+        return recent_sources
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/sources")
 async def get_sources():
     """Get all sources from the database."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row  # Return rows as dicts
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT id, timestamp, raw_text, context, title 
+            SELECT id, created_at, last_edited, raw_text, context, title 
             FROM sources 
-            ORDER BY timestamp DESC
+            ORDER BY last_edited DESC
         """)
         sources = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -158,7 +175,7 @@ async def get_sources():
 async def get_source_quotations(source_id: int):
     """Get all quotations for a specific source."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -180,12 +197,12 @@ async def get_source_quotations(source_id: int):
 async def get_source(source_id: int):
     """Get a specific source by ID."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT id, timestamp, raw_text, context, title 
+            SELECT id, created_at, last_edited, raw_text, context, title 
             FROM sources 
             WHERE id = ?
         """, (source_id,))
@@ -206,7 +223,7 @@ async def get_source(source_id: int):
 async def get_quotation(quotation_id: int):
     """Get a specific quotation by ID with its source information."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -214,7 +231,7 @@ async def get_quotation(quotation_id: int):
             SELECT q.id, q.quotation_text, q.locator,
                    s.id as source_id, s.title as source_title, 
                    s.context as source_context, s.raw_text as source_text,
-                   s.timestamp as source_timestamp
+                   s.created_at as source_created_at, s.last_edited as source_last_edited
             FROM quotations q
             JOIN sources s ON q.source_id = s.id
             WHERE q.id = ?
@@ -236,7 +253,7 @@ async def get_quotation(quotation_id: int):
 async def get_quotation_propositions(quotation_id: int):
     """Get all propositions for a specific quotation."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -264,7 +281,7 @@ async def get_quotation_propositions(quotation_id: int):
 async def get_all_quotations():
     """Get all quotations with their source information."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -273,7 +290,7 @@ async def get_all_quotations():
                    s.id as source_id, s.title as source_title, s.context as source_context
             FROM quotations q
             JOIN sources s ON q.source_id = s.id
-            ORDER BY s.timestamp DESC, q.id
+            ORDER BY s.last_edited DESC, q.id
         """)
         quotations = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -287,31 +304,31 @@ async def get_all_quotations():
 async def get_recent_items():
     """Get recently added items from all tables."""
     try:
-        conn = sqlite3.connect("argumem.db")
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
         # Get recent sources
         cursor.execute("""
-            SELECT 'source' as type, id, timestamp, title, 
+            SELECT 'source' as type, id, created_at, title, 
                    substr(raw_text, 1, 200) as preview,
                    raw_text as content, context
             FROM sources 
-            ORDER BY timestamp DESC 
+            ORDER BY created_at DESC 
             LIMIT 10
         """)
         sources = [dict(row) for row in cursor.fetchall()]
         
         # Get recent quotations with source info
         cursor.execute("""
-            SELECT 'quotation' as type, q.id, s.timestamp, 
+            SELECT 'quotation' as type, q.id, s.created_at, 
                    'Quotation from: ' || COALESCE(s.title, 'Source #' || s.id) as title,
                    substr(q.quotation_text, 1, 200) as preview,
                    q.quotation_text as content, q.locator,
                    s.id as source_id, s.title as source_title
             FROM quotations q
             JOIN sources s ON q.source_id = s.id
-            ORDER BY s.timestamp DESC, q.id DESC
+            ORDER BY s.created_at DESC, q.id DESC
             LIMIT 10
         """)
         quotations = [dict(row) for row in cursor.fetchall()]
@@ -321,9 +338,9 @@ async def get_recent_items():
         # Skip propositions for now since none are created in current implementation
         propositions = []
         
-        # Combine and sort all items by timestamp
+        # Combine and sort all items by created_at
         all_items = sources + quotations + propositions
-        all_items.sort(key=lambda x: x['timestamp'], reverse=True)
+        all_items.sort(key=lambda x: x['created_at'], reverse=True)
         
         conn.close()
         return all_items[:20]  # Return top 20 most recent items
@@ -335,21 +352,7 @@ async def get_recent_items():
 async def clear_database():
     """Clear all data from the database."""
     try:
-        conn = sqlite3.connect("argumem.db")
-        cursor = conn.cursor()
-        
-        # Delete all data from tables (in reverse dependency order)
-        cursor.execute("DELETE FROM arguments")
-        cursor.execute("DELETE FROM propositions")
-        cursor.execute("DELETE FROM quotations")
-        cursor.execute("DELETE FROM sources")
-        
-        # Reset auto-increment counters
-        cursor.execute("DELETE FROM sqlite_sequence")
-        
-        conn.commit()
-        conn.close()
-        
+        clear_db(DB_PATH)
         return {"message": "Database cleared successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
