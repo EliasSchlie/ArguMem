@@ -2,9 +2,12 @@
 
 from typing import Optional
 from pydantic import BaseModel, Field
-
+from typing import List
 
 class Quotation(BaseModel):
-    """Schema for extracted quotations."""
-    text: str = Field(description="The exact quotation text")
-    locator: Optional[str] = Field(default=None, description="Location/reference within the source (page, paragraph, etc.)")
+    """One specific quotation."""
+    text: str = Field(description="The extracted quotation text")
+
+class Quotations_list(BaseModel):
+    """List of quotations."""
+    quotations: List[Quotation] = Field(description="The extracted quotations")

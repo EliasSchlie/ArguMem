@@ -52,7 +52,7 @@ class ArguMem:
         Add a new memory to the database.
         
         Args:
-            content: The text content to store
+            content: The raw text content of the source
             context: Context information about the content
             title: Optional title for the memory
             timestamp: Optional custom timestamp
@@ -63,7 +63,7 @@ class ArguMem:
         Example:
             >>> mem = ArguMem()
             >>> source_id = mem.addMemory(
-            ...     content="Climate change requires immediate action",
+            ...     content=raw_source_text,
             ...     context="Environmental policy paper",
             ...     title="Climate Action Report 2024"
             ... )

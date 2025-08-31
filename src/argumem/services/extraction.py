@@ -5,22 +5,21 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from ..models.schemas import Quotation
+from ..models.schemas import Quotations_list
 
 class QuotationExtractor:
     """Service for extracting quotations using LLM."""
     
-    def __init__(self, model: str = "gpt-5", temperature: float = 0):
-        self.llm = ChatOpenAI(model=model, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=Quotation)
-        self.prompt = ChatPromptTemplate.from_template(
-            "Extract all meaningful quotations, statements, or key passages from the following text. "
-            "For each quotation, identify its approximate location (e.g., 'beginning', 'middle', 'end', or specific paragraph/sentence). "
-            "Return them as a JSON array of quotation objects.\n"
-            "Text: {text}\n"
-            "{format_instructions}"
-        )
-        self.chain = self.prompt | self.llm | self.parser
+    def __init__(self, model: str = "gpt-5-mini"):
+
+        with open("src/argumem/prompts/quote_extractor_system_prompt.md", "r") as f:
+            system_prompt = f.read()
+
+        self.llm = ChatOpenAI(
+            model=model,            
+            use_responses_api=True,
+            system_message=system_prompt,
+        ).with_structured_output(Quotations_list)
     
     def extract(self, text: str) -> List[Dict[str, str]]:
         """
@@ -32,17 +31,38 @@ class QuotationExtractor:
         Returns:
             List of dicts with 'text' and 'locator' keys
         """
-        try:
-            result = self.chain.invoke({
-                "text": text,
-                "format_instructions": self.parser.get_format_instructions()
-            })
-            
-            if isinstance(result, list):
-                return [{"text": q.get("text", ""), "locator": q.get("locator")} for q in result]
-            elif result:
-                return [{"text": result.get("text", ""), "locator": result.get("locator")}]
-            else:
-                return []
-        except Exception:
-            return []
+        return self.llm.invoke(text)
+        
+if __name__ == "__main__":
+    extractor = QuotationExtractor()
+    test_text = """
+    uv supports persistent configuration files at both the project- and user-level.
+
+    Specifically, uv will search for a pyproject.toml or uv.toml file in the current directory, or in the nearest parent directory.
+
+    Note
+
+    For tool commands, which operate at the user level, local configuration files will be ignored. Instead, uv will exclusively read from user-level configuration (e.g., ~/.config/uv/uv.toml) and system-level configuration (e.g., /etc/uv/uv.toml).
+
+    In workspaces, uv will begin its search at the workspace root, ignoring any configuration defined in workspace members. Since the workspace is locked as a single unit, configuration is shared across all members.
+
+    If a pyproject.toml file is found, uv will read configuration from the [tool.uv] table. For example, to set a persistent index URL, add the following to a pyproject.toml:
+    """
+    print(extractor.extract(test_text))
+
+
+# Tool approach is currently abandoned for this approach because it would require multiple api calls and would thus increase latency and cost.
+'''
+def log_quotation(
+        text: str = Field(description="Proposition found in the source in its most clear and concise form"),
+    ) -> None:
+    """
+    Log an atomic quotation from the provided source text. Quotations must be clear concise propositions.
+    Usually, this requires paraphrasing what is written in the source, but sometimes it might be a direct quotation.
+    """
+    return None
+
+def confirm_task_done() -> None:
+    """Call this tool when you are sure that you successfully and completely finished your task. (might be immediately if the task doesn't require action)"""
+    return None
+'''
