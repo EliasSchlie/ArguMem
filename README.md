@@ -34,7 +34,7 @@ prem -. use .-> quot
 
 ### Core functions
 
-The [[argumem.py]] file contains the `Argumem` class, which provides the following interactions:
+The [argumem.py](src/argumem/argumem.py) file contains the `Argumem` class, which provides the following interactions:
 
 * `add_memory`
 * `get_memory`
