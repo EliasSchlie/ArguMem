@@ -4,30 +4,44 @@ ArguMem turns unstructured text into an argument graph. It stores sources, extra
 
 ### Core concepts
 - **Source**: raw text with optional `context` and `title`.
-- **Quotation**: atomic statement extracted from a source (optional `locator`).
-- **Proposition**: normalized claim (schema present, UI/API coming).
-- **Argument**: links propositions and quotations (schema present).
+- **Quotation**: atomic statement extracted from a source.
+    - Can be represented as `[source_type]: "[source_name]" by [author(s)] [date] claims "[quotation]"` e.g. `Post on X: "Self-driving soon" by Elon Musk 01.01.2050 claims: "We will have self driving soon"`
+    - Always true to source (e.g. `Müller et al., 2025 claims that Schneider et al., 2010 claims that AI will likely be beneficial to humanity`)
+- **Proposition**: A clear one sentence claim that can be true or false. 
+    - Can be supported/countered by multiple arguments.
+    - Are used in arguments to support/counter other propositions 
+- **Argument**: a collection of premises (= propositions or quotations) that support or counter its proposition.
 
 ### Data model (high-level)
 ```mermaid
 flowchart TD
-  s["Source"] --> q["Quotation"]
-  p["Proposition"] --> a["Argument"]
-  a -. cites .- q
-  a -. supports/attacks .- p
+
+prem[Premise]
+quot[Quotation]
+prop[""Proposition""]
+s[Source]
+arg[Argument]
+
+s -. many .-> quot
+arg -. many .-> prem
+prop -. many .-> arg
+prem -. use .-> prop
+prem -. use .-> quot
 ```
 
-### What works today
-- Add a source and automatically extract quotations via an LLM.
-- Browse sources and quotations; view simple database stats.
-- Propositions/arguments are scaffolded for upcoming iterations.
+### Core functions
+
+The [[argumem.py]] file contains the `Argumem` class which offers the following types of interactions
+- `add_memory`
+- `get_memory`
+- `check_belief`
 
 ### Project layout
+- `src/argumem`: core library
 - `src/api`: FastAPI service exposing the HTTP API
-- `src/argumem`: core library (extraction, repositories, schema)
 - `web`: minimal React UI (Vite)
 
-## Quickstart
+## Quickstart (with frontend)
 
 Prereqs: `uv` (Python), Node 18+.
 
@@ -40,29 +54,3 @@ uv run src/api/main.py
 ```bash
 cd web && npm install && npm run dev
 ```
-
-## API (essentials)
-
-- `POST /memories`
-  - Body: `{ "content": string, "context": string, "title"?: string }`
-  - Auth: `X-OpenAI-API-Key` header or `OPENAI_API_KEY` env
-  - Effect: stores a source and extracted quotations
-
-- `GET /sources` · `GET /sources/{id}` · `GET /sources/{id}/quotations`
-- `GET /quotations` · `GET /database/info` · `GET /recent`
-
-Example:
-```bash
-curl -X POST http://localhost:8000/memories \
-  -H 'Content-Type: application/json' \
-  -H 'X-OpenAI-API-Key: YOUR_KEY' \
-  -d '{
-    "content": "A, because of B. Therefore C.",
-    "context": "paper snippet",
-    "title": "Example"
-  }'
-```
-
-## Notes
-- CORS is enabled for `http://localhost:5173` (Vite dev). API defaults to port `8000`.
-- The extractor currently targets quotations; proposition/argument construction is next.
