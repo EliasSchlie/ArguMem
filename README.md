@@ -31,9 +31,8 @@ flowchart TD
 
 Prereqs: `uv` (Python), Node 18+.
 
-1) Run the API (needs an OpenAI API key)
+1) Run the API
 ```bash
-export OPENAI_API_KEY=...  # or send per-request header
 uv run src/api/main.py
 ```
 
